@@ -1,14 +1,14 @@
 #include <opencv2/imgproc/imgproc_c.h>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/highgui/highgui_c.h>
+//#include <opencv2/highgui/highgui_c.h>
 #define __OPENCL__
 #include <visiongl.h>
 
 int jan1 = 3;
 int jan2 = 3;
-int val1 = 0;
-int val2 = 0;
-int tsy = 4.0;
+int val1 = 1;
+int val2 = 3;
+float tsy = 3.0;
 int b = 1.0;
 
 void vglMin(VglImage *input_1, VglImage *input_2, VglImage *output){
@@ -235,6 +235,58 @@ float* gaussianFunction2D(int sizeX, int sizeY, float sigma){
 	return element;
 };
 
+float* gaussianFunction2D2(int sizeX, int sizeY, float sigma){
+	int i, centro, limX, limY, x, y;
+	limX = (sizeX - 1) / 2;
+	limY = (sizeY - 1) / 2;
+	float t = 2*( pow(sigma,2) );
+	float m = 1 / (M_PI*t);
+	float fator, *element = NULL;
+	
+	if ( (sizeX % 2 == 0) || (sizeY % 2 == 0) ){
+		printf("[Error] Valor de X e Y nao podem ser par\n");
+		exit(1);
+	}
+	
+	if (sigma <= 0){
+		printf("[Error] Valor de sigma deve ser positivo nao nulo\n");
+		exit(1);
+	}
+	
+
+	element = (float*)malloc( (sizeX*sizeY)*sizeof(float) );
+	
+	centro = ( (sizeX*sizeY) - 1) / 2;
+	
+	//Calculando o valor para o centro e calculando o fator de normalização
+	element[centro] = m * ( pow(M_E, 0) );
+	fator = 1 / element[centro];
+	element[centro] = 1;
+	
+	//Calculando os valores das demais coordenadas utilizando no final o fator de normalização
+	x = -limX;
+	y = -limY;
+	
+	for(i=0; i<(sizeX*sizeY); i++){
+		
+		 if(i != centro ){
+		 	
+		 	float n = ( -( pow(x,2) + pow(y,2) ) ) / t;
+		 	element[i] = (m * ( pow(M_E, n)) )*fator;
+		 	
+		 }
+		 y++;
+		 
+		 if( y == (limY+1) ){
+		 	y = - limY;
+		 	x++;
+		 }
+	}
+	
+	return element;
+};
+
+
 void aplicarMask(IplImage *src, IplImage *mask, IplImage *dst){
   IplImage *tmp = cvCloneImage(mask);
 
@@ -244,7 +296,7 @@ void aplicarMask(IplImage *src, IplImage *mask, IplImage *dst){
   cvReleaseImage(&tmp);
 }
 
-void metodo(FILE *entrada,int nImg,int type,int tam, int bh, float ts){
+void metodo(FILE *entrada,int nImg,int type,int tam, int bh){
   int i;
   char diretorio[200];
 
@@ -260,99 +312,33 @@ void metodo(FILE *entrada,int nImg,int type,int tam, int bh, float ts){
     }
   
     fscanf(entrada,"%s", diretorio);
-/*
-    VglImage *vImage = vglLoadImage(diretorio);
-    float *element = gaussianFunction2D( tam, tam, ( (tam - 1) / 2) * (1.0/(5.0*3.0)) );
-//      float *element = gaussianFunction2D( tam, tam, ( (tam - 1) / 2) * (1.0/(5.0*tam)) );
-      IplImage *imagem = cvCreateImage(cvGetSize(vImage->ipl),vImage->ipl->depth, 3);
-      IplImage *temp = cvCreateImage(cvGetSize(vImage->ipl),vImage->ipl->depth, 1);
-      cvSplit(vImage->ipl, NULL, temp, NULL, NULL);
-
-      IplImage *mask = cvCreateImage(cvGetSize(temp),temp->depth, temp->nChannels);
-      cvThreshold(temp,mask, 20, 255, CV_THRESH_BINARY);
-      aplicarMask(temp,mask,temp);
-
-      gaussianBlurImage(temp,temp,5,5,2,1);
-      cvMerge(temp,temp,temp,NULL, imagem);
-   //   VglImage *vImage = vglCopyCreateImage( imagem );
-      vImage = vglCopyCreateImage( imagem );
-      vglImage3To4Channels(vImage);
-
-      VglImage *tmp = vglCreateImage(vImage);
-
-      blackHat(vImage, vImage, element, tam, tam, bh, type);
-
-      vglImage4To3Channels(vImage);
-
-      IplImage *mask2 = cvCreateImage(cvGetSize(imagem),imagem->depth, imagem->nChannels);
-      cvMerge(mask,mask,mask,NULL,mask2);
-      cvCopy(vImage->ipl, imagem);
-      cvErode(mask2,mask2, NULL, 10);
-      aplicarMask(imagem,mask2,imagem);
-      vImage = vglCopyCreateImage( imagem );
-      cvReleaseImage(&imagem);
-
-      vglImage3To4Channels(vImage);
-
-      vglClThreshold(vImage, tmp, ts/255.0 , 1.0);
-      vglClCopy(tmp,vImage);
-      vglClDownload(vImage);
-
-      VglImage *buffer1 = vglCreateImage(vImage);
-      VglImage *buffer2 = vglCreateImage(vImage);
-
-      openingByReconstruction(vImage,vImage,buffer1,buffer2,element,tam,tam,1, type);
-      vglReleaseImage(&buffer2);
-
-      vglClThreshold(vImage, buffer1, 0/255.0, 1.0);
-      vglClCopy(buffer1,vImage);
-
-      vglClDownload(vImage);
-
-      vglImage4To3Channels(vImage);
-
-      fscanf(entrada, "%s", diretorio);
-      cvSaveImage(diretorio, vImage->ipl);
-
-      vglReleaseImage(&tmp);
-      vglReleaseImage(&vImage);*/
  
-    VglImage *vImage = vglLoadImage(diretorio);
+//    VglImage *vImage = vglLoadImage(diretorio);
+    IplImage *suporte = cvLoadImage(diretorio);
+    VglImage *vImage = vglCopyCreateImage (suporte);
+    cvReleaseImage(&suporte);
     IplImage *tmp = cvCreateImage(cvGetSize(vImage->ipl),vImage->ipl->depth, 1);
-  
-//( (tam - 1) / 2) * (1.0/(5.0*3.0))
-//( (tam - 1) / 2) * (1.0/(5.0*tam*tam))
-//( (tam - 1) / 2) * (1.0/(5.0*tam))
-//( (tam - 1) / 2) * (1.0/(tam*3.0))
 
-  //  float *element = gaussianFunction2D( tam, tam, ( (tam - 1) / 2) * (1.0/(5.0*3.0)) );
-    float *element = gaussianFunction2D( tam, tam, ( (tam - 1) / 2) * (1.0/(5.0*tam)) );
+
+    float *element = gaussianFunction2D( tam, tam, ( (tam - 1) / 2) * (1.0/(5.0*tam)));   
+    //float *element = gaussianFunction2D2( tam, tam, ( (tam) / x ) );
 
     cvSplit(vImage->ipl, NULL, tmp, NULL, NULL);
     vglReleaseImage(&vImage);
 
-    //gaussianBlurImage(tmp, tmp, jan, jan, valor1, valor2); 
-   // gaussianBlurImage(tmp, tmp, 7, 7, 1, 1); 
-
     IplImage *mask = cvCreateImage(cvGetSize(tmp),tmp->depth, tmp->nChannels);
     cvThreshold(tmp,mask, 20, 255, CV_THRESH_BINARY);
- //   cvThreshold(tmp,mask, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
     aplicarMask(tmp,mask,tmp);
-
-   // gaussianBlurImage(tmp, tmp, jan, jan, valor1, valor2); 
-   // gaussianBlurImage(tmp, tmp, 5, 5, 3, 2); 
 
     IplImage *imagem = cvCreateImage(cvGetSize(tmp), tmp->depth, 3);
     cvMerge(tmp,tmp,tmp,NULL, imagem);
-//5x5
-
+    cvReleaseImage(&tmp);
     gaussianBlurImage(imagem,imagem, jan1, jan2, val1, val2); 
-   // gaussianBlurImage(imagem,imagem, tam, tam, (tam-1)/2, (tam-1)/2 );
-   // gaussianBlurImage(imagem, imagem, jan, jan, valor1, valor2); 
+
     vImage = vglCopyCreateImage( imagem );   
     vglImage3To4Channels(vImage);
 
-    blackHat( vImage, vImage, element, tam, tam, 1, type);
+    blackHat( vImage, vImage, element, tam, tam, bh, type);
 //---------------------------
     vglImage4To3Channels(vImage);
 
@@ -363,14 +349,9 @@ void metodo(FILE *entrada,int nImg,int type,int tam, int bh, float ts){
     aplicarMask(imagem,mask2, imagem);
 
     vImage = vglCopyCreateImage( imagem );
-//    cvReleaseImage(&imagem);
-/*
-vglImage3To4Channels(vImage);
-vglClDownload(vImage);
-vglImage4To3Channels(vImage);
-cvSaveImage("Arquivos/teste.tif", vImage->ipl);
-*/
-
+    cvReleaseImage(&mask);
+    cvReleaseImage(&mask2);
+    cvReleaseImage(&imagem);
 
     vglImage3To4Channels(vImage);
     VglImage *buffer0 = vglCreateImage(vImage);
@@ -378,34 +359,15 @@ cvSaveImage("Arquivos/teste.tif", vImage->ipl);
     vglClCopy(buffer0,vImage);
     vglClDownload(vImage);
 
-
-/*
-    cvSplit(vImage->ipl, NULL, NULL, tmp, NULL);
-    cvThreshold(tmp,tmp, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
-    cvMerge(tmp,tmp,tmp,NULL, imagem);
-    vImage = vglCopyCreateImage( imagem );
-    
-    vglImage3To4Channels(vImage);
-    VglImage *buffer0 = vglCreateImage(vImage);
-   // vglClDownload(vImage);
-*/
     VglImage *buffer1 = vglCreateImage(vImage);
     VglImage *buffer2 = vglCreateImage(vImage);
     openingByReconstruction( vImage, vImage, buffer1, buffer2, element, tam, tam, 1, type);
     vglReleaseImage(&buffer1); vglReleaseImage(&buffer2);
 
-  //  vglClFuzzyErode(vImage, buffer0, element, tam, tam, type);
- //   vglClFuzzyErode(buffer0, vImage, element, tam, tam, type);
-  //  vglClCopy(buffer0,vImage);
-
 
     vglClThreshold(vImage, buffer0, b/255.0, 1.0);
     vglClCopy(buffer0,vImage);
 
-  //  vglClFuzzyErode(vImage, buffer0, element, tam, tam, type);
-  //  vglClFuzzyErode(buffer0, vImage, element, tam, tam, type);
-  //  vglClCopy(buffer0,vImage);
-    
     vglReleaseImage(&buffer0);
     vglClDownload(vImage);
 
@@ -466,8 +428,17 @@ switch ( atoi(argv[1]) ){
     	 printf("*** [Erro] Metodo nao criado\n");
     	 exit(1);
   }
-  printf(" *** Tamanho %d, Black Hat: %d, Ts: %f ***\n", atoi(argv[3]), atoi(argv[4]), atof(argv[5]));
-  metodo(entrada, n, ident, atoi(argv[3]), atoi(argv[4]), atof(argv[5]));
+//  printf(" *** Tamanho %d, Black Hat: %d, Ts: %f ***\n", atoi(argv[3]), atoi(argv[4]), atof(argv[5]));
+
+  jan1 = atoi(argv[5]);
+  jan2 = jan1;
+  val1 = atoi(argv[6]);
+  val2 = val1;
+  tsy = atof(argv[7]);
+
+  printf(" ***Tamanho %d, Jan: %dx%d, Val(x,y): %dx%d, TS: %f ***\n", atoi(argv[3]), jan1, jan1, val1, val1, tsy );
+
+  metodo(entrada, n, ident, atoi(argv[3]), atoi(argv[4]));
   printf("Fim do metodo\n");
 
   fclose(entrada);
