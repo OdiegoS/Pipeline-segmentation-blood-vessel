@@ -6,6 +6,10 @@
 #include <string.h>
 #include <stdio.h>
 
+/**********/
+FILE *lista;
+
+
 typedef struct Roc{
 	// igs[0] = verdadeiro negativo (TN). igs[1] = verdadeiro positivo (TP)	
 	float igs[2];
@@ -167,17 +171,24 @@ void salvarFile(FILE *saida, int numImg, int diretorio, eR *comp){
 	}
 	taxa(suporte[0].igs, suporte[0].dif, val);
 	fprintf(saida, "\n\n\n\n           |  SN(TPR) |  SP(TNR) |   FPR    |   FNR    |   PPV    |   NPV    |   ACC    |\n");
+/*### */printf("\n  SN(TPR) |  SP(TNR) |   FPR    |   FNR    |   PPV    |   NPV    |   ACC    |\n");
 	fprintf(saida," Geral(%c)  |", 37);
 	k=0;	
 	while(k != 7){
 		if(val[k] < 0.100){
 			fprintf(saida,"  0%.2f%c  |", val[k]*100, 37);
+/* ########## */	printf("  0%.2f%c  |", val[k]*100, 37);
 		}else{
 			fprintf(saida,"  %.2f%c  |", val[k]*100, 37);
+/* ########## */	printf("  %.2f%c  |", val[k]*100, 37);
 		}
 		k++;
+
 	}
 
+/**********/
+	fprintf(lista,"TPR: %.2f%c, FPR: %.2f%c, ACC: %.2f%c\n",val[0]*100, 37, val[2]*100,37, val[6]*100,37);
+/*##*/ printf("\n\n");
 	fprintf(saida, "\n\n\n\n");
 	for(i=1;i<=diretorio;i++){
 		if(i==1){
@@ -274,10 +285,13 @@ void processos(FILE *entrada, FILE *saida){
 
 }
 
+
 int main (int argc, char** argv){
 
   FILE *entrada = fopen(argv[1],"r");
-  FILE *saida = fopen("Arquivos/ResultRoc01-40.txt","w");
+  FILE *saida = fopen("Resultados/ResultDrive_01-40.txt","w");
+
+/*****/ lista = fopen(argv[8], "a");
 
   if( entrada == NULL ){
       printf("*** [Erro] Nao foi possivel abrir o arquivo de entrada\n");
@@ -289,7 +303,12 @@ int main (int argc, char** argv){
       exit(1);
   }
 
+/*****/
+  fprintf(lista,"Metodo %d -> Tamanho %d, Jan: %dx%d, Val(x,y): %dx%d, BH: %d, TS: %d,  ", atoi(argv[2]), atoi(argv[3]), atoi(argv[5]), atoi(argv[5]), atoi(argv[6]), atoi(argv[6]), atoi(argv[4]), atoi(argv[7]) );
   processos(entrada, saida);
+/****/
+  fflush(lista);
+  fclose(lista);
 
   fflush(saida);
   fclose(entrada);
